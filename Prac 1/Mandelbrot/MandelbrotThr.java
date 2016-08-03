@@ -45,7 +45,7 @@ public class MandelbrotThr extends Applet
         this.addMouseMotionListener(this);
         ////////////////////////////////////////////////////////////////////////
         //define pool size
-        pool = Executors.newFixedThreadPool(poolSize);
+        pool = Executors.newFixedThreadPool(10);
         ////////////////////////////////////////////////////////////////////////
       } // init
 
@@ -85,8 +85,11 @@ public class MandelbrotThr extends Applet
       { startTime = System.currentTimeMillis();
         for (int i = 0; i < ysize; i += taskSize)
           { // Start thread
-            Thread t = new Thread(new WorkerThread(i, i+taskSize));
-            t.start();
+            ////////////////////////////////////////////////////////////////////
+            //Thread t = new Thread(new WorkerThread(i, i+taskSize));
+            //t.start();
+            pool.execute()
+            ////////////////////////////////////////////////////////////////////
           }
         waitForResults();
       } // generateImage
@@ -204,6 +207,21 @@ public class MandelbrotThr extends Applet
         a.start();
       } // main
 
+    ////////////////////////////////////////////////////////////////////////////
+    //TASK: Created class for WorkerThreads to return when called
+    private class Returnable
+    {
+      public byte[][] pixels;
+      public int start;
+
+      public Returnable(byte[][] pixels, int start)
+      {
+        this.pixels = pixels;
+        this.start = start;
+      }
+    }
+    ////////////////////////////////////////////////////////////////////////////
+
     // Inner classes
 
     private static class WindowCloser extends WindowAdapter
@@ -213,7 +231,7 @@ public class MandelbrotThr extends Applet
           }
       } // inner class WindowCloser
 
-    private class WorkerThread implements Runnable
+    private class WorkerThread implements Callable //TASK: Made WorkerThread Callable
       { private int start;
         private int end;
 
@@ -222,7 +240,11 @@ public class MandelbrotThr extends Applet
             this.end = end;
           } // constructor
 
-        private void calculateMandelbrot()
+        ////////////////////////////////////////////////////////////////////////
+        // TASK: Make calculateMandelbrot return a Returnable
+        //private void calculateMandelbrot()
+        private Returnable calculateMandelbrot()
+        ////////////////////////////////////////////////////////////////////////
           { double x, y, xx, a, b = y1, da = x2/xsize, db = y2/ysize;
             byte[][] results = new byte[xsize][end-start];
 
@@ -250,10 +272,16 @@ public class MandelbrotThr extends Applet
                 b = b + db;
               }
             progress += 1;
-            display(results, start);
+            ////////////////////////////////////////////////////////////////////
+            //display(results, start);
+            // TASK: Made WorkerThreads return values
+            return(new Returnable(results, start));
+            ////////////////////////////////////////////////////////////////////
           } // calculateMandelbrot
 
-        public void run ()
+        ////////////////////////////////////////////////////////////////////////
+        //TASK: call calculateMandelbrot
+        public Returnable call () throws Exception
           { calculateMandelbrot();
           } // run
       } // inner class WorkerThread
