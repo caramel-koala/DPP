@@ -4,7 +4,7 @@ import java.awt.event.*;
 import java.util.Date;
 ////////////////////////////////////////////////////////////////////////////////
 // TASK: Imported the concurrent library
-import java.util.concurrent;
+import java.util.concurrent.*;
 ////////////////////////////////////////////////////////////////////////////////
 
 public class MandelbrotThr extends Applet
@@ -15,10 +15,6 @@ public class MandelbrotThr extends Applet
     private final int NUM_TASKS = 100;
     private Thread master;
     private long startTime;
-    ////////////////////////////////////////////////////////////////////////////
-    // TASK: Create ExacutorService
-    private final ExecutorService pool;
-    ////////////////////////////////////////////////////////////////////////////
 
     // initial region for which Mandelbrot is being computed
     private double x1 = -2.25;
@@ -43,11 +39,7 @@ public class MandelbrotThr extends Applet
         // set up listeners
         this.addMouseListener(this);
         this.addMouseMotionListener(this);
-        ////////////////////////////////////////////////////////////////////////
-        //define pool size
-        pool = Executors.newFixedThreadPool(10);
-        ////////////////////////////////////////////////////////////////////////
-      } // init
+        } // init
 
     public void start ()
       { // create offscreen buffer
@@ -83,14 +75,29 @@ public class MandelbrotThr extends Applet
 
     private void generateImage()
       { startTime = System.currentTimeMillis();
+
+        ////////////////////////////////////////////////////////////////////////
+        //define pool size and create pool
+        ExecutorService pool = Executors.newFixedThreadPool(10);
+        ////////////////////////////////////////////////////////////////////////
+
+        ////////////////////////////////////////////////////////////////////////
+        // TASK: Create and run threads in pool
         for (int i = 0; i < ysize; i += taskSize)
-          { // Start thread
-            ////////////////////////////////////////////////////////////////////
-            //Thread t = new Thread(new WorkerThread(i, i+taskSize));
+          { //Thread t = new Thread(new WorkerThread(i, i+taskSize));
             //t.start();
-            pool.execute()
-            ////////////////////////////////////////////////////////////////////
+            //create callable tasks
+            Callable<Returnable> todo = new WorkerThread(i,i+taskSize);
+
+            //run callable tasks to create future
+            Future<Returnable> results = pool.submit(todo);
+
+            //print results
+            try { display(results.get()); }
+            catch (ExecutionException e0) { e0.printStackTrace(); }
+            catch (InterruptedException e1) { e1.printStackTrace(); }
           }
+          //////////////////////////////////////////////////////////////////////
         waitForResults();
       } // generateImage
 
@@ -176,18 +183,21 @@ public class MandelbrotThr extends Applet
         return colour;
       } // getPixelColour
 
-    private   void display (byte[][] points, int start)
+    ////////////////////////////////////////////////////////////////////////////
+    //TASK: Have the display input and use a Returnable
+    private void display (Returnable res)
       { int j = 0;
-        for(int l=start;j < taskSize; j++, l++)
+        for(int l=res.start;j < taskSize; j++, l++)
           { for(int k = 0; k < xsize; k++)
-              { int n = points[k][j];
-                Color pixelColour = getPixelColour(points[k][j]);
+              { int n = res.pixels[k][j];
+                Color pixelColour = getPixelColour(res.pixels[k][j]);
                 offg.setColor(pixelColour);
                 offg.fillRect(k, l, 1, 1);
               }
           }
         repaint();
       } // display
+      //////////////////////////////////////////////////////////////////////////
 
     public void mousePressed(MouseEvent e) {}
     public void mouseClicked(MouseEvent e) {}
@@ -282,8 +292,9 @@ public class MandelbrotThr extends Applet
         ////////////////////////////////////////////////////////////////////////
         //TASK: call calculateMandelbrot
         public Returnable call () throws Exception
-          { calculateMandelbrot();
-          } // run
+          { return calculateMandelbrot();
+          } // call
+        ////////////////////////////////////////////////////////////////////////
       } // inner class WorkerThread
 
   } // class MandelbrotThr
