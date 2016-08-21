@@ -50,5 +50,14 @@ public class MessageClient
     return null;
   }
 
+  public static void main (String[] args)
+  {
+    Scanner reader = new Scanner(System.in);  // Reading from System.in
+    while (True)
+    {
+      System.out.println("(1=NewMessage,2=Readmessage,0=Exit): ");
+      int n = reader.nextInt();
 
+    }
+  }
 }
